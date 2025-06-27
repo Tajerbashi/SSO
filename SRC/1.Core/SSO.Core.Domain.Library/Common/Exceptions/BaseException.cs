@@ -27,5 +27,7 @@ public abstract class BaseException : Exception
     }
     protected BaseException(string message) : base(message) { }
     protected BaseException(BaseException exception) : base(exception.Message, exception) { }
-    protected BaseException(Exception exception, string message) : base("Internal Server 500", exception) { }
+    protected BaseException(Exception exception) : base("Internal Server 500", exception) { }
+    protected BaseException(string message, Exception exception) : base(message, exception) { }
+    protected BaseException(string message, BaseException exception) : base(message, exception) { }
 }

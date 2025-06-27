@@ -1,1 +1,19 @@
-﻿
+﻿global using Microsoft.AspNetCore.Identity;
+global using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+global using Microsoft.EntityFrameworkCore;
+global using Microsoft.EntityFrameworkCore.Diagnostics;
+global using Microsoft.EntityFrameworkCore.Infrastructure;
+global using Microsoft.EntityFrameworkCore.Storage;
+global using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+global using SSO.Core.Application.Library.Common.Patterns;
+global using SSO.Core.Application.Library.Common.Repository;
+global using SSO.Core.Application.Library.Interfaces;
+global using SSO.Core.Domain.Library.Common.Aggregate;
+global using SSO.Core.Domain.Library.ValueObjects;
+global using SSO.Infra.SQL.Library.Common.Context;
+global using SSO.Infra.SQL.Library.Common.Patterns;
+global using SSO.Infra.SQL.Library.Conversions;
+global using SSO.Infra.SQL.Library.Identity;
+global using System.ComponentModel.DataAnnotations.Schema;
+global using System.Globalization;
+global using System.Reflection;

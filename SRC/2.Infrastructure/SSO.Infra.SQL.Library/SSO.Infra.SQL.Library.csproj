@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\1.Core\SSO.Core.Application.Library\SSO.Core.Application.Library.csproj" />
     <ProjectReference Include="..\..\1.Core\SSO.Core.Domain.Library\SSO.Core.Domain.Library.csproj" />
+    <ProjectReference Include="..\..\SharedKernel\SSO.SharedKernel.Utilities.Library\SSO.SharedKernel.Utilities.Library.csproj" />
   </ItemGroup>
 
 </Project>
