@@ -7,7 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Common\" />
+    <Folder Include="Common\Service\" />
+    <Folder Include="Common\Repository\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SSO.Core.Domain.Library\SSO.Core.Domain.Library.csproj" />
   </ItemGroup>
 
 </Project>

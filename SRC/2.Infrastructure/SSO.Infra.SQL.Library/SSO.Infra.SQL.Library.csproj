@@ -7,7 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Common\" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\1.Core\SSO.Core.Application.Library\SSO.Core.Application.Library.csproj" />
+    <ProjectReference Include="..\..\1.Core\SSO.Core.Domain.Library\SSO.Core.Domain.Library.csproj" />
   </ItemGroup>
 
 </Project>
