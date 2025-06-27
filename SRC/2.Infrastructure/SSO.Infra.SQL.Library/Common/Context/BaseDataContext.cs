@@ -1,9 +1,11 @@
 ﻿
 using Microsoft.EntityFrameworkCore.Metadata;
+using SSO.Infra.SQL.Library.Common.Interceptors.ShadowProperties;
 
 namespace SSO.Infra.SQL.Library.Common.Context;
 
-public abstract class BaseDataContext : IdentityDbContext<UserIdentity, RoleIdentity, long, UserClaimIdentity, UserRoleIdentity, UserLoginIdentity, RoleClaimIdentity, UserTokenIdentity>
+public abstract class BaseDataContext : IdentityDbContext<
+    UserIdentity, RoleIdentity, long, UserClaimIdentity, UserRoleIdentity, UserLoginIdentity, RoleClaimIdentity, UserTokenIdentity>
 {
     protected BaseDataContext()
     {
@@ -23,6 +25,7 @@ public abstract class BaseDataContext : IdentityDbContext<UserIdentity, RoleIden
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        builder.AddShadowProperty();
         builder.ApplyIdentityConfiguration();
     }
 

@@ -8,3 +8,9 @@ public class DomainValueObjectException : BaseException
     {
     }
 }
+public class DomainLogicException : BaseException
+{
+    public DomainLogicException(string message, params string[] parameters) : base(message, parameters)
+    {
+    }
+}

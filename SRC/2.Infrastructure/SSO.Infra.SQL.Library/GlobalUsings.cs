@@ -5,6 +5,8 @@ global using Microsoft.EntityFrameworkCore.Diagnostics;
 global using Microsoft.EntityFrameworkCore.Infrastructure;
 global using Microsoft.EntityFrameworkCore.Storage;
 global using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+global using Microsoft.Extensions.Configuration;
+global using Microsoft.Extensions.DependencyInjection;
 global using SSO.Core.Application.Library.Common.Patterns;
 global using SSO.Core.Application.Library.Common.Repository;
 global using SSO.Core.Application.Library.Interfaces;

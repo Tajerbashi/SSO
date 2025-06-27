@@ -1,1 +1,15 @@
-﻿
+﻿global using Dapper;
+global using Microsoft.Data.SqlClient;
+global using Microsoft.Extensions.Caching.Distributed;
+global using Microsoft.Extensions.Caching.Memory;
+global using Microsoft.Extensions.Configuration;
+global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.Extensions.Logging;
+global using SSO.SharedKernel.Utilities.Library.DapperProvider.QueryModels;
+global using SSO.SharedKernel.Utilities.Library.Helpers;
+global using SSO.SharedKernel.Utilities.Library.Scrutor.Abstractions;
+global using SSO.SharedKernel.Utilities.Library.SerializerProvider;
+global using System.ComponentModel.DataAnnotations.Schema;
+global using System.Data;
+global using System.Reflection;
+global using System.Text;
