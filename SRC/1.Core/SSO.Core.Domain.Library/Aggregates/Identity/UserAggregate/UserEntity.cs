@@ -59,6 +59,8 @@ public class UserEntity : AggregateRoot
             LockoutEnd = parameter.LockoutEnd,
             LockoutEnabled = parameter.LockoutEnabled,
             AccessFailedCount = parameter.AccessFailedCount,
+            IsActive = true,
+            IsDeleted = false
         };
     }
 
