@@ -39,4 +39,6 @@ public class CurrentUserService : IUser
 
     public string Ip => _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
     public string Agent => _httpContextAccessor.HttpContext?.Request.Headers["User-Agent"].ToString() ?? string.Empty;
+
+    public string RefreshToken => GetStringClaim("RefreshToken");   // Get Refresh Token
 }

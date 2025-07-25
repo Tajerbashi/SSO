@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc.Filters;
 using Serilog.Context;
+using SSO.SharedKernel.Utilities.Library.SerializerProvider;
 using System.Text.Json;
 
 namespace SSO.EndPoint.WebApi.Providers.Serilog;
@@ -7,10 +8,11 @@ namespace SSO.EndPoint.WebApi.Providers.Serilog;
 public class LogActionFilter : IActionFilter
 {
     private readonly ILogger<LogActionFilter> _logger;
-
-    public LogActionFilter(ILogger<LogActionFilter> logger)
+    private readonly IJsonSerializer _jsonSerializer;
+    public LogActionFilter(ILogger<LogActionFilter> logger, IJsonSerializer jsonSerializer)
     {
         _logger = logger;
+        _jsonSerializer = jsonSerializer;
     }
 
     public void OnActionExecuting(ActionExecutingContext context)
@@ -40,7 +42,30 @@ public class LogActionFilter : IActionFilter
     {
         if (context.Exception == null && context.Result != null)
         {
-            _logger.LogInformation("Executed Action Result: {Result}", context.Result.ToString());
+            object resultValue = null;
+
+            if (context.Result is ObjectResult objectResult)
+            {
+                resultValue = objectResult.Value;
+            }
+            else if (context.Result is JsonResult jsonResult)
+            {
+                resultValue = jsonResult.Value;
+            }
+            else if (context.Result is ContentResult contentResult)
+            {
+                resultValue = contentResult.Content;
+            }
+
+            if (resultValue != null)
+            {
+                var responseData = _jsonSerializer.Serialize(resultValue);
+                _logger.LogInformation("Executed Action Result: {Result}", responseData);
+            }
+            else
+            {
+                _logger.LogInformation("Executed Action with no serializable result.");
+            }
         }
     }
 }

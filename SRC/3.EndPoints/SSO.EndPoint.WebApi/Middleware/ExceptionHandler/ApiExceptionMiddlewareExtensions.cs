@@ -83,7 +83,7 @@ public static class ApiExceptionMiddlewareExtensions
             DatabaseException or
             UnauthorizedAccessException or
             KeyNotFoundException => exception.Message,
-            _ => "Invalid token"
+            _ => exception.Message
         };
         return message;
     }

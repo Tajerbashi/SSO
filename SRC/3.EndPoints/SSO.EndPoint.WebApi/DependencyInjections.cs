@@ -31,7 +31,7 @@ public static class DependencyInjections
 
         // Add Http Context Accessor.
         builder.Services.AddHttpContextAccessor();
-
+        builder.Services.AddScoped<ProviderServices>();
         // Add services to the container.
         builder.Services.AddControllers();
 

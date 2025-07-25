@@ -6,7 +6,7 @@ using SSO.EndPoint.WebApi.Providers.Identity.Handlers;
 using SSO.EndPoint.WebApi.Providers.Identity.Options;
 using SSO.Infra.SQL.Library.Common.Constants;
 using SSO.Infra.SQL.Library.Context;
-using SSO.Infra.SQL.Library.Identity;
+using SSO.Infra.SQL.Library.Identity.Entities;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using System.Text.Json;
