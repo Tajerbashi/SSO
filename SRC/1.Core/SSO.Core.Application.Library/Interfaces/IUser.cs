@@ -1,6 +1,4 @@
-﻿using SSO.SharedKernel.Utilities.Library.Autofac.Abstractions;
-
-namespace SSO.Core.Application.Library.Interfaces;
+﻿namespace SSO.Core.Application.Library.Interfaces;
 
 public interface IUser : IAutofacScopedLifetime
 {
@@ -14,6 +12,6 @@ public interface IUser : IAutofacScopedLifetime
     string Ip { get; }
     string Agent { get; }
     string Username { get; }
+    string RefreshToken { get; }
     string Email { get; }
 }
-

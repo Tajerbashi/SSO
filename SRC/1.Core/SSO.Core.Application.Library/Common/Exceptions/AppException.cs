@@ -8,11 +8,10 @@ public class AppException : BaseException
     {
     }
 
-    public AppException(Exception exception) : base(exception)
+    public AppException(string message, Exception exception) : base(message, exception)
     {
     }
-
-    public AppException(string message, Exception exception) : base(message, exception)
+    public AppException(Exception exception) : base(exception.Message, exception)
     {
     }
 
