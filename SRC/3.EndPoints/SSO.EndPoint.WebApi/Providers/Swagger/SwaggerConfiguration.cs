@@ -17,7 +17,8 @@ public static class SwaggerConfiguration
                 In = ParameterLocation.Header,
                 Description = options.Description,
                 Name = options.Name,
-                Type = SecuritySchemeType.ApiKey,
+                //Type = SecuritySchemeType.ApiKey,
+                Type = SecuritySchemeType.Http,
                 BearerFormat = options.BearerFormat,
                 Scheme = options.Scheme
             });

@@ -44,7 +44,7 @@ public static class DependencyInjections
         //  BaseSource Utilities
         builder.Services.AddBaseSourceUtilities(configuration, assemblies);
 
-        builder.Services.AddIdentity(configuration, "Identity");
+        builder.Services.AddIdentityConfiguration(configuration, "Identity");
 
         builder.Services.AddApplicationService(assemblies);
 

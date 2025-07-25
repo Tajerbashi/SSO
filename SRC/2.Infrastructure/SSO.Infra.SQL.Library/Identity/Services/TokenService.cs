@@ -14,16 +14,17 @@ namespace SSO.Infra.SQL.Library.Identity.Services;
 
 public class TokenService : ITokenService
 {
+    private const string LoginProvider = "Token";
+    private const string AuthKey = "AuthKey";
+    private const string TokenName = "AccessToken";
+    private const string RefreshTokenName = "RefreshToken";
+    private const string ProviderDisplayName = "Auth Account";
+
     private readonly UserManager<UserIdentity> _userManager;
     private readonly RoleManager<RoleIdentity> _roleManager;
     private readonly SignInManager<UserIdentity> _signInManager;
     private readonly IConfiguration _configuration;
-
-    private const string LoginProvider = "Token";
-    private const string AuthKey = "AuthKey";
-    private const string TokenName = "AccessToken";
-    private const string RefreshToken = "RefreshToken";
-    private const string ProviderDisplayName = "Auth Account";
+    private readonly JwtSecurityTokenHandler _tokenHandler;
 
     public TokenService(
         UserManager<UserIdentity> userManager,
@@ -35,91 +36,119 @@ public class TokenService : ITokenService
         _roleManager = roleManager;
         _signInManager = signInManager;
         _configuration = configuration;
+        _tokenHandler = new JwtSecurityTokenHandler();
     }
 
     public async Task<LoginResult> LoginAsync(LoginParameter parameter)
     {
-        var user = await _userManager.FindByNameAsync(parameter.Username) ?? await _userManager.FindByEmailAsync(parameter.Username);
+        var user = await FindUserByIdentifierAsync(parameter.Username);
         if (user == null)
-            return new LoginResult { Succeeded = false, Message = "Invalid credentials." };
+            return LoginResult.Failed("Invalid credentials.");
 
         var result = await _signInManager.PasswordSignInAsync(user, parameter.Password, false, false);
         if (!result.Succeeded)
-            return new LoginResult { Succeeded = false, Message = "Invalid credentials." };
+            return LoginResult.Failed("Invalid credentials.");
 
-        var tokenResult = await GenerateTokenAsync(new TokenParameter { User = UserIdentity.Map(user) });
-
-        return new LoginResult
-        {
-            Succeeded = true,
-            Message = string.Empty,
-            User = UserIdentity.Map(user),
-            Token = tokenResult.Token,
-            RefreshToken = tokenResult.RefreshToken,
-            ExpireTime = tokenResult.ExpireTime,
-        };
+        return LoginResult.Success();
     }
 
     public async Task<TokenResult> GenerateTokenAsync(TokenParameter parameter)
     {
-        var profile = await GenerateProfileAsync(parameter.User.UserName);
+        var user = await FindUserByIdentifierAsync(parameter.Username)
+            ?? throw new DatabaseException($"User not found: {parameter.Username}");
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Identity:Jwt:Key"]));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-        var expires = DateTime.UtcNow.AddMinutes(double.Parse(_configuration["Identity:Jwt:ExpireMinutes"] ?? "60"));
+        var profile = await GenerateUserProfileAsync(user);
+        var token = GenerateJwtToken(profile.Claims);
+        var tokenString = _tokenHandler.WriteToken(token);
 
-        // Generate secure refresh token (JWE encrypted)
-        var refreshToken = GenerateSecureRefreshToken();
-        var encryptedRefreshToken = EncryptRefreshToken(refreshToken);
-
-        var token = new JwtSecurityToken(
-            issuer: _configuration["Identity:Jwt:Issuer"],
-            audience: _configuration["Identity:Jwt:Audience"],
-            claims: profile.Claims,
-            expires: expires,
-            signingCredentials: creds);
-
-        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
-
-
-
-        await SaveRefreshTokenToUserAsync(parameter.User.Id.ToString(), encryptedRefreshToken);
-        await AddUserLoginAsync(parameter.User.Id);
-        await AddUserTokenAsync(parameter.User.Id, tokenString);
+        await UpdateUserTokensAsync(user, tokenString, profile.TokenResult.RefreshToken);
 
         return new TokenResult
         {
             Token = tokenString,
-            ExpireTime = expires,
-            RefreshToken = encryptedRefreshToken,
+            ExpireTime = token.ValidTo,
+            RefreshToken = profile.TokenResult.RefreshToken
         };
     }
 
-    private async Task<UserProfileDTO> GenerateProfileAsync(string username)
+    public async Task<LogoutResult> LogoutAsync(string authKey)
     {
-        var user = await _userManager.FindByNameAsync(username)
-                   ?? throw new DatabaseException($"User Not Found by username: {username}");
+        await _signInManager.SignOutAsync();
 
+        var users = await _userManager.GetUsersForClaimAsync(new Claim(AuthKey, authKey));
+        if (users.Count > 0)
+        {
+            var user = users.Single();
+            await CleanUpUserTokensAndClaimsAsync(user);
+        }
+
+        return new LogoutResult
+        {
+            Message = authKey,
+            IsSuccess = true
+        };
+    }
+
+    private async Task<UserIdentity> FindUserByIdentifierAsync(string identifier)
+    {
+        return await _userManager.FindByNameAsync(identifier)
+            ?? await _userManager.FindByEmailAsync(identifier);
+    }
+
+    private async Task<UserProfileDTO> GenerateUserProfileAsync(UserIdentity user)
+    {
+        var refreshToken = GenerateSecureRefreshToken();
+        var claims = await BuildUserClaimsAsync(user, refreshToken);
+
+        var profile = new UserProfileDTO();
+        profile.BuildClaims(claims);
+        profile.TokenResult = new TokenResult(refreshToken);
+
+        await UpdateUserClaimsAsync(user, claims);
+
+        return profile;
+    }
+
+    private async Task<List<Claim>> BuildUserClaimsAsync(UserIdentity user, string refreshToken)
+    {
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(ClaimTypes.Name, user.UserName!),
-            new("AuthKey", Guid.NewGuid().ToString()),
-            new(ClaimTypes.Email, user.Email!)
+            new(AuthKey, Guid.NewGuid().ToString()),
+            new(ClaimTypes.Email, user.Email!),
+            new(RefreshTokenName, refreshToken)
         };
 
         var roles = await _userManager.GetRolesAsync(user);
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
-        var profile = new UserProfileDTO();
+        return claims;
+    }
 
-        profile.BuildClaims(claims);
-
+    private async Task UpdateUserClaimsAsync(UserIdentity user, List<Claim> claims)
+    {
         var existingClaims = await _userManager.GetClaimsAsync(user);
         await _userManager.RemoveClaimsAsync(user, existingClaims);
         await _userManager.AddClaimsAsync(user, claims);
+    }
 
-        return profile;
+    private JwtSecurityToken GenerateJwtToken(IEnumerable<Claim> claims)
+    {
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
+            _configuration["Identity:Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not configured")));
+
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var expires = DateTime.UtcNow.AddMinutes(
+            double.Parse(_configuration["Identity:Jwt:ExpireMinutes"] ?? "60"));
+
+        return new JwtSecurityToken(
+            issuer: _configuration["Identity:Jwt:Issuer"],
+            audience: _configuration["Identity:Jwt:Audience"],
+            claims: claims,
+            expires: expires,
+            signingCredentials: creds);
     }
 
     private string GenerateSecureRefreshToken()
@@ -127,86 +156,69 @@ public class TokenService : ITokenService
         var randomBytes = new byte[64];
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(randomBytes);
-        return Convert.ToBase64String(randomBytes);
-    }
 
-    private string EncryptRefreshToken(string refreshToken)
-    {
-        var encryptionKey = _configuration["Identity:Jwe:Key"];
-        var keyBytes = Encoding.UTF8.GetBytes(encryptionKey);
+        var encryptionKey = _configuration["Identity:Jwe:Key"]
+            ?? throw new InvalidOperationException("JWE Key not configured");
+
         using var aes = Aes.Create();
-        aes.Key = keyBytes;
+        aes.Key = Encoding.UTF8.GetBytes(encryptionKey);
         aes.GenerateIV();
 
-        var encryptor = aes.CreateEncryptor();
-        var tokenBytes = Encoding.UTF8.GetBytes(refreshToken);
-        var cipherBytes = encryptor.TransformFinalBlock(tokenBytes, 0, tokenBytes.Length);
+        using var encryptor = aes.CreateEncryptor();
+        var cipherBytes = encryptor.TransformFinalBlock(randomBytes, 0, randomBytes.Length);
 
         return Convert.ToBase64String(aes.IV.Concat(cipherBytes).ToArray());
     }
 
-    private async Task SaveRefreshTokenToUserAsync(string userId, string encryptedToken)
+    private async Task UpdateUserTokensAsync(UserIdentity user, string accessToken, string refreshToken)
     {
-        var user = await _userManager.FindByIdAsync(userId)
-                   ?? throw new DatabaseException("User not found");
-
-        await _userManager.RemoveAuthenticationTokenAsync(user, LoginProvider, RefreshToken);
-
-        var result = await _userManager.SetAuthenticationTokenAsync(user, LoginProvider, RefreshToken, encryptedToken);
-        if (!result.Succeeded)
-            throw new DatabaseException("Could not save refresh token.");
+        await SaveRefreshTokenAsync(user, refreshToken);
+        await UpdateUserLoginAsync(user);
+        await SaveAccessTokenAsync(user, accessToken);
     }
 
-    private async Task AddUserLoginAsync(long id)
+    private async Task SaveRefreshTokenAsync(UserIdentity user, string refreshToken)
     {
-        var user = await _userManager.FindByIdAsync($"{id}");
+        await _userManager.RemoveAuthenticationTokenAsync(user, LoginProvider, RefreshTokenName);
+
+        var result = await _userManager.SetAuthenticationTokenAsync(
+            user, LoginProvider, RefreshTokenName, refreshToken);
+
+        if (!result.Succeeded)
+            throw new DatabaseException("Failed to save refresh token.");
+    }
+
+    private async Task SaveAccessTokenAsync(UserIdentity user, string accessToken)
+    {
+        var result = await _userManager.SetAuthenticationTokenAsync(
+            user, LoginProvider, TokenName, accessToken);
+
+        if (!result.Succeeded)
+            throw new DatabaseException("Failed to save access token.");
+    }
+
+    private async Task UpdateUserLoginAsync(UserIdentity user)
+    {
         var result = await _userManager.RemoveLoginAsync(user, LoginProvider, user.EntityId.ToString());
         if (!result.Succeeded)
-            throw new DatabaseException("Removing old login failed.");
+            throw new DatabaseException("Failed to remove old login.");
 
-        await _userManager.AddLoginAsync(user, new UserLoginInfo(LoginProvider, user.EntityId.ToString(), ProviderDisplayName));
+        await _userManager.AddLoginAsync(user,
+            new UserLoginInfo(LoginProvider, user.EntityId.ToString(), ProviderDisplayName));
     }
 
-    private async Task AddUserTokenAsync(long id, string jwtToken)
+    private async Task CleanUpUserTokensAndClaimsAsync(UserIdentity user)
     {
-        var user = await _userManager.FindByIdAsync($"{id}");
-        var result = await _userManager.SetAuthenticationTokenAsync(
-            user,
-            LoginProvider,
-            TokenName,
-            jwtToken
-        );
+        // Remove Claims
+        var claims = await _userManager.GetClaimsAsync(user);
+        await _userManager.RemoveClaimsAsync(user, claims);
 
-        if (!result.Succeeded)
-            throw new DatabaseException("Failed to update user token.");
-    }
+        // Remove Tokens
+        await _userManager.RemoveAuthenticationTokenAsync(user, LoginProvider, TokenName);
+        await _userManager.RemoveAuthenticationTokenAsync(user, LoginProvider, RefreshTokenName);
 
-    public async Task<LogoutResult> LogoutAsync(string authKey)
-    {
-        await _signInManager.SignOutAsync();
-        var user = (await _userManager.GetUsersForClaimAsync(new Claim(AuthKey, authKey)));
-        if (user.Count > 0)
-        {
-            var entity = user.Single();
-            
-            //  Remove Claims
-            var claims = await _userManager.GetClaimsAsync(entity);
-            await _userManager.RemoveClaimsAsync(entity, claims);
-
-            //  Remove Tokens
-            await _userManager.RemoveAuthenticationTokenAsync(entity, LoginProvider, TokenName);
-            await _userManager.RemoveAuthenticationTokenAsync(entity, LoginProvider, RefreshToken);
-
-            // Remove Logins
-            var loginEntity = await _userManager.GetLoginsAsync(entity);
-            await _userManager.RemoveLoginAsync(entity,LoginProvider, loginEntity.Single().ProviderKey);
-        }
-
-        return new LogoutResult()
-        {
-            Message = authKey,
-            IsSuccess = true
-        };
+        // Remove Logins
+        var logins = await _userManager.GetLoginsAsync(user);
+        await _userManager.RemoveLoginAsync(user, LoginProvider, logins.Single().ProviderKey);
     }
 }
-

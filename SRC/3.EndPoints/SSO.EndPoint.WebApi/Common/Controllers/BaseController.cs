@@ -1,12 +1,11 @@
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using SSO.Core.Application.Library;
 using SSO.EndPoint.WebApi.Extensions;
-using SSO.EndPoint.WebApi.Models;
 
 namespace SSO.EndPoint.WebApi.Common.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("api/[controller]")]
 public abstract class BaseController : ControllerBase
 {
 

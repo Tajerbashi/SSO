@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
@@ -12,72 +13,74 @@ using System.Text;
 using System.Text.Json;
 
 namespace SSO.EndPoint.WebApi.Providers.Identity;
+
 public static class IdentityExtensions
 {
-    public static IServiceCollection AddIdentity(this IServiceCollection services, IConfiguration configuration, string sectionName)
+    public static IServiceCollection AddIdentityConfiguration(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        string sectionName)
     {
-        // Add this to your service configuration
         services.Configure<IdentityOption>(configuration.GetSection(sectionName));
 
-        services.AddIdentityServices(configuration);
-        services.AddIdentityPolicies(configuration, sectionName);
+        services.AddIdentityCoreServices(configuration)
+                .AddAuthenticationStrategies(configuration, sectionName)
+                .AddAuthorizationPolicies();
 
         return services;
     }
 
-    private static IServiceCollection AddIdentityServices(this IServiceCollection services, IConfiguration configuration)
+    private static IServiceCollection AddIdentityCoreServices(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
         services.AddHttpContextAccessor();
+        services.AddDistributedMemoryCache();
+        services.AddSession(ConfigureSessionOptions);
 
-        //services.AddScoped<IIdentityService, IdentityService>();
-        //services.AddScoped<IUser, UserInfoService>();
-        //services.AddScoped<ITokenService, JwtTokenService>();
-
-        services.AddIdentity<UserIdentity, RoleIdentity>(options =>
-        {
-            options.Password.RequiredLength = 6;
-            options.Password.RequireDigit = true;
-            options.Password.RequireLowercase = true;
-            options.Password.RequireUppercase = true;
-            options.Password.RequireNonAlphanumeric = false;
-
-            // Lockout settings
-            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
-            options.Lockout.MaxFailedAccessAttempts = 5;
-            options.Lockout.AllowedForNewUsers = true;
-
-            // User settings
-            options.User.RequireUniqueEmail = true;
-        })
-        .AddEntityFrameworkStores<DataContext>()
-        .AddRoles<RoleIdentity>()
-        .AddDefaultTokenProviders()
-        .AddApiEndpoints();
-
-        //services.AddScoped<SignInManager<UserEntity>, AppSignInManager<UserEntity>>();
-        //services.AddScoped<UserManager<UserEntity>, AppUserManager<UserEntity>>();
-        //services.AddScoped<IUserClaimsPrincipalFactory<UserEntity>, AppUserClaimsFactory>();
+        services.AddIdentity<UserIdentity, RoleIdentity>(ConfigureIdentityOptions)
+            .AddEntityFrameworkStores<DataContext>()
+            .AddRoles<RoleIdentity>()
+            .AddDefaultTokenProviders()
+            .AddApiEndpoints();
 
         return services;
     }
 
-
-    private static IServiceCollection AddIdentityPolicies(this IServiceCollection services, IConfiguration configuration, string sectionName)
+    private static void ConfigureSessionOptions(SessionOptions options)
     {
-        var identityOption = new IdentityOption();
-        configuration.Bind(sectionName, identityOption);
+        options.IdleTimeout = TimeSpan.FromMinutes(30);
+        options.Cookie.Name = "_auth.Session";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.IsEssential = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    }
 
-        services.AddDistributedMemoryCache();
-        services.AddSession(options =>
-        {
-            options.IdleTimeout = TimeSpan.FromMinutes(30);
-            options.Cookie.Name = "_auth.Session";
-            options.Cookie.HttpOnly = true;
-            options.Cookie.IsEssential = true;
-            options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-        });
+    private static void ConfigureIdentityOptions(IdentityOptions options)
+    {
+        // Password settings
+        options.Password.RequiredLength = 6;
+        options.Password.RequireDigit = true;
+        options.Password.RequireLowercase = true;
+        options.Password.RequireUppercase = true;
+        options.Password.RequireNonAlphanumeric = false;
 
-        // Configure both Cookie and JWT authentication
+        // Lockout settings
+        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+        options.Lockout.MaxFailedAccessAttempts = 5;
+        options.Lockout.AllowedForNewUsers = true;
+
+        // User settings
+        options.User.RequireUniqueEmail = true;
+    }
+
+    private static IServiceCollection AddAuthenticationStrategies(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        string sectionName)
+    {
+        var identityOption = configuration.GetSection(sectionName).Get<IdentityOption>();
+
         services.AddAuthentication(options =>
         {
             options.DefaultScheme = "JWT_OR_COOKIE";
@@ -86,169 +89,191 @@ public static class IdentityExtensions
         .AddPolicyScheme("JWT_OR_COOKIE", "JWT_OR_COOKIE", options =>
         {
             options.ForwardDefaultSelector = context =>
-            {
-                var authorization = context.Request.Headers.Authorization.FirstOrDefault();
-                if (!string.IsNullOrEmpty(authorization) && authorization.StartsWith("Bearer "))
-                {
-                    // Verify the token structure before accepting
-                    var token = authorization.Substring("Bearer ".Length).Trim();
-                    if (token.Count(c => c == '.') == 2) // Basic JWT structure check
-                    {
-                        return JwtBearerDefaults.AuthenticationScheme;
-                    }
-                }
-                return "AuthorizationCookies";
-            };
+                GetAuthenticationSchemeFromRequest(context.Request);
         })
         .AddCookie("AuthorizationCookies", options =>
-        {
-            options.Cookie.Name = "_auth.TK";
-            options.LoginPath = "/Account/Login";
-            options.AccessDeniedPath = "/Account/AccessDenied";
-            options.SlidingExpiration = true;
-            options.ExpireTimeSpan = TimeSpan.FromMinutes(identityOption.Jwt.ExpireMinutes);
-
-            options.Events.OnRedirectToLogin = context =>
-            {
-                if (context.Request.Path.StartsWithSegments("/api"))
-                {
-                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                    return Task.CompletedTask;
-                }
-                context.Response.Redirect(context.RedirectUri);
-                return Task.CompletedTask;
-            };
-        })
+            ConfigureCookieAuthentication(options, identityOption))
         .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+            ConfigureJwtBearerOptions(options, identityOption));
+
+        return services;
+    }
+
+    private static string GetAuthenticationSchemeFromRequest(HttpRequest request)
+    {
+        var authorization = request.Headers.Authorization.FirstOrDefault();
+
+        if (!string.IsNullOrEmpty(authorization) &&
+            authorization.StartsWith("Bearer ") &&
+            IsValidJwtStructure(authorization["Bearer ".Length..].Trim()))
         {
-            options.TokenValidationParameters = new TokenValidationParameters
+            return JwtBearerDefaults.AuthenticationScheme;
+        }
+
+        return "AuthorizationCookies";
+    }
+
+    private static bool IsValidJwtStructure(string token)
+    {
+        return token.Count(c => c == '.') == 2; // Basic JWT structure check
+    }
+
+    private static void ConfigureCookieAuthentication(
+        CookieAuthenticationOptions options,
+        IdentityOption identityOption)
+    {
+        options.Cookie.Name = "_auth.TK";
+        options.LoginPath = "/Account/Login";
+        options.AccessDeniedPath = "/Account/AccessDenied";
+        options.SlidingExpiration = true;
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(identityOption.Jwt.ExpireMinutes);
+
+        options.Events.OnRedirectToLogin = context =>
+        {
+            if (context.Request.Path.StartsWithSegments("/api"))
             {
-                ValidateIssuer = true,
-                ValidateAudience = true,
-                ValidateLifetime = true, // Changed to true to validate token expiration
-                ValidateIssuerSigningKey = true,
-                ValidIssuer = identityOption.Jwt.Issuer,
-                ValidAudience = identityOption.Jwt.Audience,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(identityOption.Jwt.Key)),
-                ClockSkew = TimeSpan.FromMinutes(1) // Added small clock skew
-            };
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return Task.CompletedTask;
+            }
+            context.Response.Redirect(context.RedirectUri);
+            return Task.CompletedTask;
+        };
+    }
 
-            options.Events = new JwtBearerEvents
+    private static void ConfigureJwtBearerOptions(
+        JwtBearerOptions options,
+        IdentityOption identityOption)
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = identityOption.Jwt.Issuer,
+            ValidAudience = identityOption.Jwt.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(identityOption.Jwt.Key)),
+            ClockSkew = TimeSpan.FromMinutes(1)
+        };
+
+        options.Events = CreateJwtBearerEvents();
+    }
+
+    private static JwtBearerEvents CreateJwtBearerEvents()
+    {
+        return new JwtBearerEvents
+        {
+            OnMessageReceived = OnTokenReceived,
+            OnAuthenticationFailed = OnAuthenticationFailure,
+            OnTokenValidated = OnTokenValidation,
+            OnChallenge = OnChallengeResponse
+        };
+    }
+
+    private static Task OnTokenReceived(MessageReceivedContext context)
+    {
+        var authorization = context.Request.Headers["Authorization"].FirstOrDefault();
+
+        if (!string.IsNullOrEmpty(authorization) && authorization.StartsWith("Bearer "))
+        {
+            context.Token = authorization["Bearer ".Length..].Trim();
+
+            if (string.IsNullOrEmpty(context.Token) || !IsValidJwtStructure(context.Token))
             {
-                OnMessageReceived = context =>
-                {
-                    // Manually extract token from headers
-                    var authorization = context.Request.Headers["Authorization"].FirstOrDefault();
+                context.Fail("Invalid token format");
+            }
+        }
+        else
+        {
+            context.Token = context.Request.Cookies["access_token"];
+        }
 
-                    if (!string.IsNullOrEmpty(authorization) && authorization.StartsWith("Bearer "))
-                    {
-                        context.Token = authorization.Substring("Bearer ".Length).Trim();
+        return Task.CompletedTask;
+    }
 
-                        // Additional validation
-                        if (string.IsNullOrEmpty(context.Token) ||
-                            context.Token.Split('.').Length != 3)
-                        {
-                            context.Fail("Invalid token format");
-                            return Task.CompletedTask;
-                        }
-                    }
-                    else
-                    {
-                        // Try to get token from cookies as fallback
-                        context.Token = context.Request.Cookies["access_token"];
-                    }
+    private static Task OnAuthenticationFailure(AuthenticationFailedContext context)
+    {
+        if (context.Exception is SecurityTokenExpiredException)
+        {
+            context.Response.Headers.Append("Token-Expired", "true");
+        }
+        Console.WriteLine($"Authentication failed: {context.Exception}");
+        return Task.CompletedTask;
+    }
 
-                    return Task.CompletedTask;
-                },
-                OnAuthenticationFailed = context =>
-                {
-                    if (context.Exception is SecurityTokenExpiredException)
-                    {
-                        context.Response.Headers.Append("Token-Expired", "true");
-                    }
-                    Console.WriteLine($"Authentication failed: {context.Exception}");
-                    return Task.CompletedTask;
-                },
-                OnTokenValidated = context =>
-                {
-                    var authorization = context.Request.Headers["Authorization"].FirstOrDefault();
-                    if (!string.IsNullOrEmpty(authorization) && authorization.StartsWith("Bearer "))
-                    {
-                        string token = authorization.Substring("Bearer ".Length).Trim();
-                        var handler = new JwtSecurityTokenHandler();
-                        var jsonToken = handler.ReadToken(token) as JwtSecurityToken;
-                    }
+    private static Task OnTokenValidation(TokenValidatedContext context)
+    {
+        Console.WriteLine("Token successfully validated");
+        return Task.CompletedTask;
+    }
 
+    private static Task OnChallengeResponse(JwtBearerChallengeContext context)
+    {
+        context.HandleResponse();
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        context.Response.ContentType = "application/json";
 
-                    Console.WriteLine("Token successfully validated");
-                    return Task.CompletedTask;
-                },
-                OnChallenge = context =>
-                {
-                    context.HandleResponse();
-                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                    context.Response.ContentType = "application/json";
+        var errorMessage = context.AuthenticateFailure switch
+        {
+            SecurityTokenExpiredException => "Token expired",
+            SecurityTokenInvalidAudienceException => "Invalid audience",
+            SecurityTokenInvalidIssuerException => "Invalid issuer",
+            _ => "Unauthorized"
+        };
 
-                    var errorMessage = context.AuthenticateFailure switch
-                    {
-                        SecurityTokenExpiredException => "Token expired",
-                        SecurityTokenInvalidAudienceException => "Invalid audience",
-                        SecurityTokenInvalidIssuerException => "Invalid issuer",
-                        _ => "Unauthorized"
-                    };
+        var result = JsonSerializer.Serialize(new { error = errorMessage });
+        return context.Response.WriteAsync(result);
+    }
 
-                    var result = JsonSerializer.Serialize(new { error = errorMessage });
-                    return context.Response.WriteAsync(result);
-                }
-            };
-
-        });
-
+    private static IServiceCollection AddAuthorizationPolicies(this IServiceCollection services)
+    {
         services.AddAuthorization(options =>
         {
-            options.AddPolicy(Policies.CanPurge, policy => policy.RequireRole(Roles.Administrator));
-
-            options.DefaultPolicy = new AuthorizationPolicyBuilder()
-                .RequireAuthenticatedUser()
-                .AddAuthenticationSchemes("JWT_OR_COOKIE")
-                .Build();
-
-            // Admin policy - requires Admin role
-            options.AddPolicy(Policies.AdminAccess, policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireRole(Roles.Administrator);
-                // You can add additional requirements
-                // policy.RequireClaim("Department", "IT");
-            });
-
-            // User policy - requires either User or Admin role
-            options.AddPolicy(Policies.UserAccess, policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireAssertion(context =>
-                    context.User.IsInRole(Roles.User) ||
-                    context.User.IsInRole(Roles.Administrator));
-            });
-
-            // Example of a more complex policy
-            options.AddPolicy(Policies.ContentManager, policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireRole(Roles.ContentManager);
-                policy.RequireClaim("CanEditContent", "true");
-            });
-
-            options.AddPolicy("Over18", policy => policy.Requirements.Add(new MinimumAgeRequirement(18)));
-
+            ConfigureDefaultPolicies(options);
+            ConfigureRoleBasedPolicies(options);
+            options.AddPolicy("Over18", policy =>
+                policy.Requirements.Add(new MinimumAgeRequirement(18)));
         });
 
         return services;
     }
 
+    private static void ConfigureDefaultPolicies(AuthorizationOptions options)
+    {
+        options.DefaultPolicy = new AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUser()
+            .AddAuthenticationSchemes("JWT_OR_COOKIE")
+            .Build();
+    }
 
+    private static void ConfigureRoleBasedPolicies(AuthorizationOptions options)
+    {
+        // Admin policies
+        options.AddPolicy(Policies.CanPurge, policy =>
+            policy.RequireRole(Roles.Administrator));
+
+        options.AddPolicy(Policies.AdminAccess, policy =>
+        {
+            policy.RequireAuthenticatedUser();
+            policy.RequireRole(Roles.Administrator);
+        });
+
+        // User policies
+        options.AddPolicy(Policies.UserAccess, policy =>
+        {
+            policy.RequireAuthenticatedUser();
+            policy.RequireAssertion(context =>
+                context.User.IsInRole(Roles.User) ||
+                context.User.IsInRole(Roles.Administrator));
+        });
+
+        // Specialized policies
+        options.AddPolicy(Policies.ContentManager, policy =>
+        {
+            policy.RequireAuthenticatedUser();
+            policy.RequireRole(Roles.ContentManager);
+            policy.RequireClaim("CanEditContent", "true");
+        });
+    }
 }
-
-
-
-

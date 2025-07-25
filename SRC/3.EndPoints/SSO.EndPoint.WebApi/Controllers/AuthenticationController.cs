@@ -2,7 +2,6 @@ using SSO.Core.Application.Library.Models;
 using SSO.EndPoint.WebApi.Extensions;
 
 namespace SSO.EndPoint.WebApi.Controllers;
-
 public class AuthenticationController : BaseController
 {
     private readonly ILogger<AuthenticationController> _logger;
@@ -23,12 +22,17 @@ public class AuthenticationController : BaseController
         try
         {
             var result = await _identityService.TokenService.LoginAsync(parameter);
-            var token = await _identityService.TokenService.GenerateTokenAsync(new()
+            if (result.Succeeded)
             {
-                User = result.User,
-            });
+                var token = await _identityService.TokenService.GenerateTokenAsync(new()
+                {
+                    Username = parameter.Username,
+                });
 
-            return Ok(token);
+                return Ok(token);
+            }
+            return BadRequest(result);
+           
         }
         catch (Exception ex)
         {
