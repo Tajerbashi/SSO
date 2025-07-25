@@ -1,4 +1,4 @@
-﻿namespace SSO.Infra.SQL.Library.Identity.Parameters;
+﻿namespace SSO.Infra.SQL.Library.Identity.Entities.Parameters;
 
 
 public record UserCreateParameters(

@@ -7,4 +7,5 @@ public class DatabaseException : BaseException
     public DatabaseException(string message, params string[] parameters) : base(message, parameters)
     {
     }
+    public DatabaseException(Exception exception) : base(exception.Message, exception) { }
 }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using SSO.Infra.SQL.Library.Common.Constants;
-using SSO.Infra.SQL.Library.Identity.Parameters;
+using SSO.Infra.SQL.Library.Identity.Entities;
+using SSO.Infra.SQL.Library.Identity.Entities.Parameters;
 using SSO.SharedKernel.Utilities.Library.Scrutor.Abstractions;
 
 namespace SSO.Infra.SQL.Library.Context;

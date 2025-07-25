@@ -1,4 +1,6 @@
-﻿namespace SSO.Infra.SQL.Library.Common.Context;
+﻿using SSO.Infra.SQL.Library.Identity.Entities;
+
+namespace SSO.Infra.SQL.Library.Common.Context;
 
 public static class BaseDataContextExtensions
 {

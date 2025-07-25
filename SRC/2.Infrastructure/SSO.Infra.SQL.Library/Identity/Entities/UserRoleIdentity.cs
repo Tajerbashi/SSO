@@ -1,4 +1,4 @@
-﻿namespace SSO.Infra.SQL.Library.Identity;
+﻿namespace SSO.Infra.SQL.Library.Identity.Entities;
 
 [Table("UserRoles", Schema = "Identity")]
 public class UserRoleIdentity : IdentityUserRole<long>, IAuditableEntity<long>

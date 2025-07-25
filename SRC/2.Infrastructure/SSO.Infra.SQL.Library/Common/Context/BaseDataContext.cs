@@ -1,6 +1,7 @@
 ﻿
 using Microsoft.EntityFrameworkCore.Metadata;
 using SSO.Infra.SQL.Library.Common.Interceptors.ShadowProperties;
+using SSO.Infra.SQL.Library.Identity.Entities;
 
 namespace SSO.Infra.SQL.Library.Common.Context;
 
