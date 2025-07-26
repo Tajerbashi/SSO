@@ -13,8 +13,6 @@ using SSO.EndPoint.WebApi.Middleware.ValidationHandler;
 using SSO.EndPoint.WebApi.Middleware.ExceptionHandler;
 
 namespace SSO.EndPoint.WebApi;
-
-
 public static class DependencyInjections
 {
     public static WebApplicationBuilder AddWebAPIService(this WebApplicationBuilder builder)
@@ -58,6 +56,20 @@ public static class DependencyInjections
         using var scope = app.Services.CreateScope();
         var initialiser = scope.ServiceProvider.GetRequiredService<DataContextInitializer>();
         await initialiser.RunAsync();
+    }
+
+    public static WebApplication AddMinimalApis(this WebApplication app)
+    {
+
+        var baseUrl = app.Configuration["SSOUrl"] ?? "#";
+        var dateTime = DateTime.Now;
+        app.MapGet("/", () =>
+        {
+            var html = HTMLPageExtensions.GenerateStatusHtml("🔐 SSO Server", "#659fff", "#001d4c", baseUrl, dateTime);
+            return Results.Content(html, "text/html");
+        });
+
+        return app;
     }
 
     public static WebApplication UseWebAPIService(this WebApplication app)

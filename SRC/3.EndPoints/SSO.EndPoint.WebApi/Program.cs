@@ -13,5 +13,7 @@ await app.InitialiseDatabaseAsync();
 
 app.UseWebAPIService();
 
+app.AddMinimalApis();
+
 app.Run();
 

@@ -18,6 +18,21 @@ public class UserProfileDTO : BaseDTO
     public void BuildClaims(List<Claim> claims) => Claims = claims;
 }
 
+public class LoginSSOResult
+{
+    public string AccessToken { get; set; }
+    public string RefreshToken { get; set; }
+    public int ExpiresIn { get; set; }
+    public string TokenType { get; set; }
+    public string Scope { get; set; }   // Scopes for Server1 & Server2
+}
+public class LoginSSOParameter
+{
+    public string Username { get; set; }
+    public string Password { get; set; }
+    public string ClientId { get; set; } // Optional (if using OAuth)
+    public string GrantType { get; set; } // Or "authorization_code" for OAuth
+}
 public class LoginParameter
 {
     public string Username { get; set; }

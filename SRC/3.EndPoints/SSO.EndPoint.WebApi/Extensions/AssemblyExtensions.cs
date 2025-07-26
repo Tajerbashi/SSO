@@ -2,7 +2,6 @@
 using System.Reflection;
 
 namespace SSO.EndPoint.WebApi.Extensions;
-
 public static class AssemblyExtensions
 {
     public static List<Assembly> GetAssemblies(this string assemblyNames)

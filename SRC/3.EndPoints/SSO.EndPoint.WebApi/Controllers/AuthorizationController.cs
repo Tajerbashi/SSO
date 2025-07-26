@@ -1,6 +1,6 @@
 namespace SSO.EndPoint.WebApi.Controllers;
 
-public class AuthorizationController : AuthController
+public class AuthorizationController : AuthorizeController
 {
     [HttpGet("IsAuthorized")]
     public IActionResult IsAuthorized()

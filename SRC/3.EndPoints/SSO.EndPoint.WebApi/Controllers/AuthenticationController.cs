@@ -2,21 +2,21 @@ using SSO.Core.Application.Library.Models;
 using SSO.EndPoint.WebApi.Extensions;
 
 namespace SSO.EndPoint.WebApi.Controllers;
-public class AuthenticationController : BaseController
+public class AuthController : BaseController
 {
-    private readonly ILogger<AuthenticationController> _logger;
+    private readonly ILogger<AuthController> _logger;
     private readonly IIdentityService _identityService;
 
-    public AuthenticationController(ILogger<AuthenticationController> logger, IIdentityService identityService)
+    public AuthController(ILogger<AuthController> logger, IIdentityService identityService)
     {
         _logger = logger;
-        _logger.LogInformation("~> AuthenticationController Constructor !!!");
+        _logger.LogInformation("~> AuthController Constructor !!!");
         _identityService = identityService;
     }
 
 
 
-    [HttpPost("LoginAs")]
+    [HttpPost("Login")]
     public async Task<IActionResult> LoginAs(LoginParameter parameter)
     {
         try

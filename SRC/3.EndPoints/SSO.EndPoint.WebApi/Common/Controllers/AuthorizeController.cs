@@ -1,6 +1,6 @@
 namespace SSO.EndPoint.WebApi.Common.Controllers;
 
 [Authorize]
-public abstract class AuthController : BaseController
+public abstract class AuthorizeController : BaseController
 {
 }
