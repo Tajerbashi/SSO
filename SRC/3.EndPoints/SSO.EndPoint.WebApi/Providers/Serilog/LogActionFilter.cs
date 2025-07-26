@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc.Filters;
 using Serilog.Context;
 using SSO.SharedKernel.Utilities.Library.SerializerProvider;
-using System.Text.Json;
 
 namespace SSO.EndPoint.WebApi.Providers.Serilog;
 
@@ -21,7 +20,11 @@ public class LogActionFilter : IActionFilter
 
         var controller = context.RouteData.Values["controller"];
         var action = context.RouteData.Values["action"];
-        var parameters = JsonSerializer.Serialize(context.ActionArguments);
+        var serializableArguments = context.ActionArguments
+       .Where(kv => kv.Value is not null && IsSimpleOrDto(kv.Value.GetType()))
+       .ToDictionary(kv => kv.Key, kv => kv.Value);
+
+        var parameters = _jsonSerializer.Serialize(serializableArguments);
         // Read request body (buffered copy)
         request.EnableBuffering();
         var bodyReader = new StreamReader(request.Body);
@@ -67,5 +70,15 @@ public class LogActionFilter : IActionFilter
                 _logger.LogInformation("Executed Action with no serializable result.");
             }
         }
+    }
+
+    private static bool IsSimpleOrDto(Type type)
+    {
+        return type.IsPrimitive
+               || type == typeof(string)
+               || type == typeof(decimal)
+               || type == typeof(DateTime)
+               || type == typeof(Guid)
+               || (type.IsClass && type.Namespace?.StartsWith("SSO") == true); // Adjust this
     }
 }

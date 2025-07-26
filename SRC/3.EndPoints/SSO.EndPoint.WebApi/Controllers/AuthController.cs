@@ -2,6 +2,7 @@ using SSO.Core.Application.Library.Models;
 using SSO.EndPoint.WebApi.Extensions;
 
 namespace SSO.EndPoint.WebApi.Controllers;
+[Route("[controller]")]
 public class AuthController : BaseController
 {
     private readonly ILogger<AuthController> _logger;
@@ -16,7 +17,7 @@ public class AuthController : BaseController
 
 
 
-    [HttpPost("Login")]
+    [HttpPost("login")]
     public async Task<IActionResult> LoginAs(LoginParameter parameter)
     {
         try
@@ -42,7 +43,7 @@ public class AuthController : BaseController
     }
 
 
-    [HttpGet("Logout")]
+    [HttpGet("logout")]
     public async Task<IActionResult> Logout(string authKey)
     {
         try
@@ -58,5 +59,20 @@ public class AuthController : BaseController
         }
     }
 
+    [HttpPost("index")]
+    public async Task<IActionResult> Index(LoginSSOParameter parameter,CancellationToken cancellation = default)
+    {
+        await Task.Delay(1000,cancellation);
+        var response = new LoginSSOResult()
+        {
+            AccessToken = "",
+            ExpiresIn = 6000,
+            RefreshToken = "",
+            ReturnUrl = parameter.ReturnUrl,
+            Scope = "",
+            TokenType = "",
+        };
+        return Ok(response);
+    }
 }
 

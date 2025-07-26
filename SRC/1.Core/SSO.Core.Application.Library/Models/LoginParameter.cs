@@ -22,6 +22,7 @@ public class LoginSSOResult
 {
     public string AccessToken { get; set; }
     public string RefreshToken { get; set; }
+    public string ReturnUrl { get; set; }
     public int ExpiresIn { get; set; }
     public string TokenType { get; set; }
     public string Scope { get; set; }   // Scopes for Server1 & Server2
@@ -32,6 +33,7 @@ public class LoginSSOParameter
     public string Password { get; set; }
     public string ClientId { get; set; } // Optional (if using OAuth)
     public string GrantType { get; set; } // Or "authorization_code" for OAuth
+    public string ReturnUrl { get; set; }
 }
 public class LoginParameter
 {

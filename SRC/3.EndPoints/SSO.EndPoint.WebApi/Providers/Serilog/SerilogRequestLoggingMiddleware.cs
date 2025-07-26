@@ -16,26 +16,33 @@ public class RequestLoggingMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        var request = context.Request;
-
-        // Read request body (buffered copy)
-        request.EnableBuffering();
-        var bodyReader = new StreamReader(request.Body);
-        string requestBody = await bodyReader.ReadToEndAsync();
-        request.Body.Position = 0;
-
-        // Get route data
-        var controller = context.GetRouteValue("controller")?.ToString();
-        var action = context.GetRouteValue("action")?.ToString();
-
-        using (LogContext.PushProperty("Controller", controller))
-        using (LogContext.PushProperty("Action", action))
-        using (LogContext.PushProperty("RequestBody", requestBody))
+        try
         {
-            _logger.LogInformation("Handled request {Method} {Path}", request.Method, request.Path);
-        }
+            var request = context.Request;
 
-        await _next(context);
+            // Read request body (buffered copy)
+            request.EnableBuffering();
+            var bodyReader = new StreamReader(request.Body);
+            string requestBody = await bodyReader.ReadToEndAsync();
+            request.Body.Position = 0;
+
+            // Get route data
+            var controller = context.GetRouteValue("controller")?.ToString();
+            var action = context.GetRouteValue("action")?.ToString();
+
+            using (LogContext.PushProperty("Controller", controller))
+            using (LogContext.PushProperty("Action", action))
+            using (LogContext.PushProperty("RequestBody", requestBody))
+            {
+                _logger.LogInformation("Handled request {Method} {Path}", request.Method, request.Path);
+            }
+
+            await _next(context);
+        }
+        catch (Exception)
+        {
+            await _next(context);
+        }
     }
 }
 
