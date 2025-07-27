@@ -1,16 +1,17 @@
 ﻿using Autofac;
 using Autofac.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Http;
+using SSO.Core.Application.Library;
 using SSO.EndPoint.WebApi.Extensions;
+using SSO.EndPoint.WebApi.Middleware.ExceptionHandler;
+using SSO.EndPoint.WebApi.Middleware.ValidationHandler;
+using SSO.EndPoint.WebApi.Providers.Identity;
 using SSO.EndPoint.WebApi.Providers.Serilog;
 using SSO.EndPoint.WebApi.Providers.Swagger;
-using SSO.SharedKernel.Utilities.Library.Autofac;
-using SSO.SharedKernel.Utilities.Library;
-using SSO.EndPoint.WebApi.Providers.Identity;
-using SSO.Core.Application.Library;
 using SSO.Infra.SQL.Library;
 using SSO.Infra.SQL.Library.Context;
-using SSO.EndPoint.WebApi.Middleware.ValidationHandler;
-using SSO.EndPoint.WebApi.Middleware.ExceptionHandler;
+using SSO.SharedKernel.Utilities.Library;
+using SSO.SharedKernel.Utilities.Library.Autofac;
 
 namespace SSO.EndPoint.WebApi;
 public static class DependencyInjections
@@ -63,7 +64,7 @@ public static class DependencyInjections
     public static WebApplication AddMinimalApis(this WebApplication app)
     {
 
-        var baseUrl = app.Configuration["SSOUrl"] ?? "#";
+        var baseUrl = app.Configuration["BaseUrl"] + "Identity/Account/Login";
         var dateTime = DateTime.Now;
         app.MapGet("/", () =>
         {
@@ -83,6 +84,8 @@ public static class DependencyInjections
             //  Swagger
             app.UseSwaggerProvider();
         }
+        app.UseStaticFiles();
+
         app.UseHttpsRedirection();
 
         app.UseMiddleware<RequestLoggingMiddleware>();
