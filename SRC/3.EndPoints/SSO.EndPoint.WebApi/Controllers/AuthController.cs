@@ -1,78 +1,36 @@
-using SSO.Core.Application.Library.Models;
-using SSO.EndPoint.WebApi.Extensions;
+using Duende.IdentityServer.Models;
+using Duende.IdentityServer.Services;
+using System.Web;
 
 namespace SSO.EndPoint.WebApi.Controllers;
-[Route("[controller]")]
+
 public class AuthController : BaseController
 {
-    private readonly ILogger<AuthController> _logger;
-    private readonly IIdentityService _identityService;
+    private readonly IIdentityServerInteractionService _interaction;
 
-    public AuthController(ILogger<AuthController> logger, IIdentityService identityService)
+    public AuthController(IIdentityServerInteractionService interaction)
     {
-        _logger = logger;
-        _logger.LogInformation("~> AuthController Constructor !!!");
-        _identityService = identityService;
+        _interaction = interaction;
     }
 
-
-
-    [HttpPost("login")]
-    public async Task<IActionResult> LoginAs(LoginParameter parameter)
+    [HttpGet("login")]
+    public IActionResult Login([FromQuery] string returnUrl)
     {
-        try
-        {
-            var result = await _identityService.TokenService.LoginAsync(parameter);
-            if (result.Succeeded)
-            {
-                var token = await _identityService.TokenService.GenerateTokenAsync(new()
-                {
-                    Username = parameter.Username,
-                });
+        // Create the proper login URL with parameters
+        var loginUrl = $"/Account/Login?returnUrl={HttpUtility.UrlEncode(returnUrl ?? "/")}";
 
-                return Ok(token);
-            }
-            return BadRequest(result);
-           
-        }
-        catch (Exception ex)
-        {
-
-            throw ex.ThrowException();
-        }
+        return Ok(new { LoginUrl = loginUrl });
     }
-
 
     [HttpGet("logout")]
-    public async Task<IActionResult> Logout(string authKey)
+    public async Task<IActionResult> Logout([FromQuery] string logoutId)
     {
-        try
+        var context = await _interaction.GetLogoutContextAsync(logoutId);
+        return Ok(new
         {
-            var result = await _identityService.TokenService.LogoutAsync(authKey);
-
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-
-            throw ex.ThrowException();
-        }
-    }
-
-    [HttpPost("index")]
-    public async Task<IActionResult> Index(LoginSSOParameter parameter,CancellationToken cancellation = default)
-    {
-        await Task.Delay(1000,cancellation);
-        var response = new LoginSSOResult()
-        {
-            AccessToken = "",
-            ExpiresIn = 6000,
-            RefreshToken = "",
-            ReturnUrl = parameter.ReturnUrl,
-            Scope = "",
-            TokenType = "",
-        };
-        return Ok(response);
+            logoutUrl = context.PostLogoutRedirectUri,
+            clientName = context.ClientName,
+            signOutIFrameUrl = context.SignOutIFrameUrl
+        });
     }
 }
-

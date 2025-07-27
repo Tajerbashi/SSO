@@ -32,6 +32,8 @@ public static class DependencyInjections
         builder.Services.AddScoped<ProviderServices>();
         // Add services to the container.
         builder.Services.AddControllers();
+        builder.Services.AddRazorComponents();
+        builder.Services.AddRazorPages();
 
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddOpenApi();
@@ -97,6 +99,8 @@ public static class DependencyInjections
 
         app.MapControllers();
 
+        app.MapRazorPages(); // Required for Identity pages
+        
         return app;
     }
 }

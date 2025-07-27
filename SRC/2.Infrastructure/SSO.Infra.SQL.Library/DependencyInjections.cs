@@ -1,6 +1,7 @@
 ﻿using SSO.Core.Application.Library.Common.Service;
 using SSO.Infra.SQL.Library.Common.Interceptors.ShadowProperties;
 using SSO.Infra.SQL.Library.Context;
+using SSO.Infra.SQL.Library.Identity.Entities;
 
 namespace SSO.Infra.SQL.Library;
 
@@ -26,6 +27,11 @@ public static class DependencyInjections
             options.AddInterceptors(new AddAuditDataInterceptor());
             //options.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll); // default, can omit if preferred
         });
+
+        //services.AddDefaultIdentity<UserIdentity>(
+        //    options => options.SignIn.RequireConfirmedAccount = true)
+        //    .AddEntityFrameworkStores<DataContext>();
+
 
         services.AddScoped<DataContextInitializer>();
 

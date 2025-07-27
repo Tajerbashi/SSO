@@ -5,7 +5,7 @@ using SSO.EndPoint.WebApi.Extensions;
 namespace SSO.EndPoint.WebApi.Common.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("sso/[controller]")]
 public abstract class BaseController : ControllerBase
 {
 
@@ -13,11 +13,13 @@ public abstract class BaseController : ControllerBase
 
     public override OkObjectResult Ok([ActionResultObjectValue] object? value)
     {
-        return base.Ok(ApiResponseModel.Success(value).SetRefreshToken(ProviderServices.User.RefreshToken));
+        return base.Ok(value);
+        //return base.Ok(ApiResponseModel.Success(value).SetRefreshToken(ProviderServices.User.RefreshToken));
     }
 
     public override BadRequestObjectResult BadRequest([ActionResultObjectValue] object? error)
     {
-        return base.BadRequest(ApiResponseModel.Faild(error).SetRefreshToken(ProviderServices.User.RefreshToken));
+        return base.BadRequest(error);
+        //return base.BadRequest(ApiResponseModel.Faild(error).SetRefreshToken(ProviderServices.User.RefreshToken));
     }
 }
