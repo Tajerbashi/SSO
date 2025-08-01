@@ -14,7 +14,10 @@ namespace SSO.EndPoint.WebApp.Pages
 
         public void OnGet()
         {
-
+            if (!User.Identity.IsAuthenticated)
+            {
+                RedirectToPage("Login");
+            }
         }
     }
 }

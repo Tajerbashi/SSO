@@ -100,11 +100,11 @@ public static class DependencyInjections
     public static WebApplication AddMinimalApis(this WebApplication app)
     {
 
-        var baseUrl = app.Configuration["BaseUrl"] + "login";
+        var baseUrl = app.Configuration["BaseUrl"] + "Common/Dashboard";
         var dateTime = DateTime.Now;
         app.MapGet("/", () =>
         {
-            var html = HTMLPageExtensions.GenerateStatusHtml("🔐 SSO Server", "#659fff", "#001d4c", baseUrl, dateTime);
+            var html = HTMLPageExtensions.GenerateStatusHtml("🔐 SSO Portal", "#659fff", "#001d4c", baseUrl, dateTime);
             return Results.Content(html, "text/html");
         });
 

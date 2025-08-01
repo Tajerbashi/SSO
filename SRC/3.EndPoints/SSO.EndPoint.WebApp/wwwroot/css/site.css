@@ -1,31 +1,165 @@
+/* === Base Typography & Responsive Font Sizes === */
 html {
-  font-size: 14px;
+    font-size: 14px;
+    position: relative;
+    min-height: 100%;
 }
 
 @media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-html {
-  position: relative;
-  min-height: 100%;
+    html {
+        font-size: 16px;
+    }
 }
 
 body {
-  margin-bottom: 60px;
+    margin-bottom: 60px;
+    background: linear-gradient(135deg, #1e1e2f, #2e2e4f);
+    color: #f1f1f1;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding-top: 70px; /* Adjust based on header height */
+    padding-bottom: 60px; /* Adjust based on footer height */
 }
 
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-  color: var(--bs-secondary-color);
-  text-align: end;
+/* === Fixed Header === */
+header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1030; /* above everything */
 }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-  text-align: start;
+/* === Fixed Footer === */
+footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1020;
+}
+
+
+/* === Ensure content fills height for short pages === */
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+.main-content {
+    min-height: calc(100vh - 130px); /* subtract header+footer height */
+    padding: 1rem;
+}
+
+
+
+
+/* === Typography & Links === */
+a {
+    color: #88c0d0;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+    a:hover {
+        color: #66aaff;
+    }
+
+/* === Focus States (Material-Like Highlighting) === */
+.btn:focus,
+.btn:active:focus,
+.btn-link.nav-link:focus,
+.form-control:focus,
+.form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(37, 140, 251, 0.5);
+    outline: none;
+}
+
+/* === Navbar Styles === */
+.navbar {
+    background: linear-gradient(90deg, #212121, #3a3a5f);
+    border-bottom: 1px solid #444;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.navbar-brand,
+.nav-link {
+    color: #f1f1f1 !important;
+    font-weight: 500;
+}
+
+    .navbar-brand:hover,
+    .nav-link:hover {
+        color: #ddd !important;
+    }
+
+/* === Footer === */
+footer {
+    background: #2c2c3c;
+    border-top: 1px solid #444;
+    color: #ccc;
+    padding: 1rem 0;
+    text-align: center;
+}
+
+/* === Form Styles === */
+.form-control,
+.btn {
+    border-radius: 8px;
+    transition: box-shadow 0.3s ease, background-color 0.3s ease;
+}
+
+.form-control {
+    background-color: #1f1f2f;
+    border: 1px solid #444;
+    color: #fff;
+}
+
+    .form-control::placeholder {
+        color: #888;
+    }
+
+    .form-control:focus {
+        background-color: #27273a;
+        border-color: #4f8edc;
+    }
+
+/* === Floating Label Placeholder Direction === */
+.form-floating > .form-control::placeholder,
+.form-floating > .form-control-plaintext::placeholder {
+    color: #aaa;
+    text-align: end;
+}
+
+.form-floating > .form-control:focus::placeholder,
+.form-floating > .form-control-plaintext:focus::placeholder {
+    text-align: start;
+}
+
+/* === Buttons === */
+.btn-primary {
+    background: linear-gradient(90deg, #4f8edc, #2a5fa7);
+    border: none;
+    color: #fff;
+}
+
+    .btn-primary:hover {
+        background: linear-gradient(90deg, #3a75c4, #1c4b88);
+    }
+
+/* === Cards === */
+.card {
+    background-color: #2b2b3c;
+    border: 1px solid #444;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* === Container Padding === */
+.container {
+/*    
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+
+*/
 }

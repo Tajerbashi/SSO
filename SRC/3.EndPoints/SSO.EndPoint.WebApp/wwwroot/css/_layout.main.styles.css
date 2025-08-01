@@ -1,0 +1,52 @@
+.app-page {
+    padding: 10px;
+    height: 80vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.app-page-content {
+    width: 100%;
+    max-width: 400px;
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #fff;
+}
+
+.glass-input {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+}
+
+    .glass-input::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .glass-input:focus {
+        background-color: rgba(255, 255, 255, 0.2);
+        outline: none;
+        box-shadow: 0 0 0 0.25rem rgba(80, 130, 255, 0.3);
+    }
+
+.glass-button {
+    background: linear-gradient(135deg, #4f8edc, #2a5fa7);
+    border: none;
+    border-radius: 10px;
+    font-weight: bold;
+    padding: 10px 0;
+    transition: all 0.3s ease;
+}
+
+    .glass-button:hover {
+        background: linear-gradient(135deg, #3a75c4, #1c4b88);
+    }
