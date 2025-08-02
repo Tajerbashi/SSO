@@ -1,28 +1,58 @@
 ﻿@page
-@model LoginModel
+@model SSO.EndPoint.WebApp.Pages.Account.LoginModel
 
 <div class="app-page d-flex justify-content-center align-items-center">
     <div class="app-page-content glass-card p-4">
         <h2 class="text-center mb-4">Sign In</h2>
-        <form method="post" asp-page="/Account/Login">
+
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+            <div class="alert alert-danger">@Model.ErrorMessage</div>
+        }
+
+        <form method="post">
+            <input type="hidden" asp-for="ReturnUrl" />
+
             <div class="mb-3">
-                <label class="form-label">Username</label>
-                <input type="text" class="form-control glass-input" name="Username" placeholder="Enter username" required>
+                <label asp-for="Input.Username" class="form-label"></label>
+                <input asp-for="Input.Username" class="form-control glass-input" placeholder="Enter username">
+                <span asp-validation-for="Input.Username" class="text-danger"></span>
             </div>
+
             <div class="mb-3">
-                <label class="form-label">Password</label>
-                <input type="password" class="form-control glass-input" name="Password" placeholder="Enter password" required>
+                <label asp-for="Input.Password" class="form-label"></label>
+                <input asp-for="Input.Password" type="password" class="form-control glass-input" placeholder="Enter password">
+                <span asp-validation-for="Input.Password" class="text-danger"></span>
             </div>
+
+            <div class="mb-3 form-check">
+                <input asp-for="Input.RememberMe" class="form-check-input">
+                <label asp-for="Input.RememberMe" class="form-check-label"></label>
+            </div>
+
             <div class="d-grid">
-                <button type="submit" class="btn btn-primary glass-button">Login</button>
+                <button type="submit" class="btn btn-primary glass-button glass-button-primary">Login</button>
             </div>
         </form>
+
+        @if (Model.EnvironmentIsDevelopment)
+        {
+            <form method="get" asp-page-handler="LoginAs">
+                <input type="hidden" asp-for="ReturnUrl" />
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-danger mt-3 glass-button glass-button-danger">Login As Admin</button>
+                </div>
+            </form>
+        }
+
         <div class="mt-3 text-center">
             <a href="/Account/Register" class="text-light small">Don't have an account? Register</a>
+            <span class="mx-2">|</span>
+            <a href="/Account/ForgotPassword" class="text-light small">Forgot password?</a>
         </div>
     </div>
 </div>
 
-
-@{
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
 }
