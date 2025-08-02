@@ -45,9 +45,33 @@ public class TokenService : ITokenService
         if (user == null)
             return LoginResult.Failed("Invalid credentials.");
 
-        var result = await _signInManager.PasswordSignInAsync(user, parameter.Password, false, false);
+        var result = await _signInManager.PasswordSignInAsync(user, parameter.Password, parameter.IsRemember, lockoutOnFailure: true);
         if (!result.Succeeded)
             return LoginResult.Failed("Invalid credentials.");
+
+        var role = await _userManager.GetRolesAsync(user);
+
+        // Create claims identity with required claims
+        var claims = new List<Claim>
+        {
+            new Claim("sub", $"{user.Id}"),
+            new Claim("name", user.UserName),
+            new Claim("role", role.First()),
+            new Claim("UserId", $"{user.Id}"),
+            new Claim("UserName", user.UserName),
+            new Claim("Name", user.FirstName),
+            new Claim("Family", user.LastName),
+            new Claim("Email", user.Email),
+            // Add any additional claims your application needs
+        };
+        var identity = new ClaimsIdentity(claims, "Identity.Application");
+        var principal = new ClaimsPrincipal(identity);
+
+        // Sign in with the properly constructed principal
+        await _signInManager.SignInWithClaimsAsync(
+            user,
+            parameter.IsRemember,
+            claims);
 
         return LoginResult.Success();
     }
