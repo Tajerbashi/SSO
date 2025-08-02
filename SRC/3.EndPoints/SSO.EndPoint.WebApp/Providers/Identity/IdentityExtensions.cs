@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication.Cookies;
+﻿using Duende.IdentityModel;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using SSO.EndPoint.WebApp.Providers.Identity.Handlers;
@@ -52,6 +53,10 @@ public static class IdentityExtensions
 
     private static void ConfigureIdentityOptions(IdentityOptions options)
     {
+        options.ClaimsIdentity.UserIdClaimType = JwtClaimTypes.Subject;
+        options.ClaimsIdentity.UserNameClaimType = JwtClaimTypes.Name;
+        options.ClaimsIdentity.RoleClaimType = JwtClaimTypes.Role;
+
         // Password settings
         options.Password.RequiredLength = 6;
         options.Password.RequireDigit = true;
@@ -85,10 +90,8 @@ public static class IdentityExtensions
             options.ForwardDefaultSelector = context =>
                 GetAuthenticationSchemeFromRequest(context.Request);
         })
-        .AddCookie("AuthorizationCookies", options =>
-            ConfigureCookieAuthentication(options, identityOption))
-        .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
-            ConfigureJwtBearerOptions(options, identityOption));
+        .AddCookie("AuthorizationCookies", options => ConfigureCookieAuthentication(options, identityOption))
+        .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options => ConfigureJwtBearerOptions(options, identityOption));
 
         return services;
     }
@@ -118,20 +121,44 @@ public static class IdentityExtensions
     {
         options.Cookie.Name = "_auth.TK";
         options.LoginPath = "/Account/Login";
+        options.ReturnUrlParameter = "ReturnUrl";
         options.AccessDeniedPath = "/Account/AccessDenied";
         options.SlidingExpiration = true;
         options.ExpireTimeSpan = TimeSpan.FromMinutes(identityOption.Jwt.ExpireMinutes);
 
-        options.Events.OnRedirectToLogin = context =>
+        options.Events = new CookieAuthenticationEvents
         {
-            if (context.Request.Path.StartsWithSegments("/api"))
+            OnRedirectToLogin = context =>
             {
-                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                if (IsApiRequest(context.Request))
+                {
+                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    return Task.CompletedTask;
+                }
+                // For MVC/Razor Pages
+                context.Response.Redirect(
+                    $"{options.LoginPath}?{options.ReturnUrlParameter}={context.Request.Path}");
+                return Task.CompletedTask;
+            },
+
+            OnRedirectToAccessDenied = context =>
+            {
+                if (IsApiRequest(context.Request))
+                {
+                    context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    return Task.CompletedTask;
+                }
+
+                context.Response.Redirect(options.AccessDeniedPath);
                 return Task.CompletedTask;
             }
-            context.Response.Redirect(context.RedirectUri);
-            return Task.CompletedTask;
         };
+    }
+
+    private static bool IsApiRequest(HttpRequest request)
+    {
+        return request.Path.StartsWithSegments("/api") ||
+               request.Headers["Accept"].ToString().Contains("application/json");
     }
 
     private static void ConfigureJwtBearerOptions(

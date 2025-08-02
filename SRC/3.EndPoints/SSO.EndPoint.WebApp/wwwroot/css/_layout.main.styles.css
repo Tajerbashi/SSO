@@ -39,7 +39,6 @@
     }
 
 .glass-button {
-    background: linear-gradient(135deg, #4f8edc, #2a5fa7);
     border: none;
     border-radius: 10px;
     font-weight: bold;
@@ -47,6 +46,20 @@
     transition: all 0.3s ease;
 }
 
-    .glass-button:hover {
-        background: linear-gradient(135deg, #3a75c4, #1c4b88);
-    }
+.glass-button-primary {
+    background: linear-gradient(135deg, #4f8edc, #2a5fa7);
+}
+
+.glass-button-danger {
+    background: linear-gradient(135deg, #dc4f4f, #a72a2a);
+}
+
+.glass-button-success {
+    background: linear-gradient(135deg, #55dc4f, #61a72a);
+}
+
+.glass-button:hover {
+    /*        background: linear-gradient(135deg, #3a75c4, #1c4b88);*/
+    background: linear-gradient(135deg, #00000058, #0d0026);
+    border: 1px solid #929292;
+}

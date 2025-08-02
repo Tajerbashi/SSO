@@ -1,9 +1,4 @@
-﻿using Autofac;
-using Autofac.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using SSO.EndPoint.WebApp.Middleware.ExceptionHandler;
+﻿using SSO.EndPoint.WebApp.Middleware.ExceptionHandler;
 using SSO.EndPoint.WebApp.Middleware.ValidationHandler;
 using SSO.EndPoint.WebApp.Providers.IdentityServer;
 using SSO.EndPoint.WebApp.Providers.Serilog;
@@ -18,7 +13,7 @@ public static class DependencyInjections
         var assemblies = "SSO".GetAssemblies().ToArray();
 
         builder.AddSerilogService();
-        
+
         // Configure Autofac
         builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory())
                .ConfigureContainer<ContainerBuilder>(containerBuilder =>
@@ -80,9 +75,9 @@ public static class DependencyInjections
         app.UseApiExceptionHandler();
 
         app.UseAuthentication();
-        
+
         app.UseAuthorization();
-        
+
         app.UseIdentityServerConfiguration();
 
         // Razor Pages + MVC
@@ -100,7 +95,7 @@ public static class DependencyInjections
     public static WebApplication AddMinimalApis(this WebApplication app)
     {
 
-        var baseUrl = app.Configuration["BaseUrl"] + "Common/Dashboard";
+        var baseUrl = app.Configuration["BaseUrl"] + "Public/Dashboard";
         var dateTime = DateTime.Now;
         app.MapGet("/", () =>
         {
