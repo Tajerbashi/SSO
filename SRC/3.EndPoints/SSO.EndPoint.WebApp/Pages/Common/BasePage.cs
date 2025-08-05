@@ -3,14 +3,8 @@
 public abstract class BasePage : PageModel
 {
 }
-[Authorize]
+//[Authorize]
 public abstract class AuthPage : BasePage
 {
-    protected AuthPage()
-    {
-        if (!User.Identity.IsAuthenticated)
-        {
-            Redirect("/Account/Login");
-        }
-    }
+    
 }

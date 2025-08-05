@@ -52,10 +52,6 @@ public class LoginModel : PageModel
             ModelState.AddModelError(string.Empty, ErrorMessage);
         }
 
-        if (User.Identity?.IsAuthenticated == true)
-        {
-            return RedirectToLocal(ReturnUrl);
-        }
 
         return Page();
     }
