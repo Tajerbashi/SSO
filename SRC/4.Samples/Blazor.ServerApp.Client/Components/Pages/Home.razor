@@ -1,7 +1,333 @@
 ﻿@page "/"
+@using System.Net
+@using Microsoft.Extensions.Logging
+@rendermode InteractiveServer
+@inject HttpClient Http
 
-<PageTitle>Home</PageTitle>
+<PageTitle>API Dashboard</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="app-container">
+    <div class="app-content">
+        <div class="app-grid">
+            <div class="app-width-1-2">
+                <div class="card">
+                    <div class="card-header bg-dark text-white">
+                        <h5>API Request</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group mb-3">
+                            <label for="method">HTTP Method</label>
+                            <select @bind="SelectedMethod" class="form-control" id="method">
+                                <option value="GET">GET</option>
+                                <option value="POST">POST</option>
+                                <option value="PUT">PUT</option>
+                                <option value="DELETE">DELETE</option>
+                            </select>
+                        </div>
 
-Welcome to your new app.
+                        <div class="form-group mb-3">
+                            <label for="url">API URL</label>
+                            <input @bind="ApiUrl" type="text" class="form-control" id="url" placeholder="https://api.example.com/endpoint" />
+                        </div>
+
+                        <div class="form-group mb-3" style="display: @(ShowBodyInput ? "block" : "none")">
+                            <label for="body">Request Body (JSON)</label>
+                            <textarea @bind="RequestBody" class="form-control" id="body" rows="5"></textarea>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="headers">Headers (JSON)</label>
+                            <textarea @bind="RequestHeaders" class="form-control" id="headers" rows="3" placeholder='{"Content-Type": "application/json", "Authorization": "Bearer token"}'></textarea>
+                        </div>
+
+                        <button @onclick="CallApi" class="btn btn-primary">
+                            @if (IsLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                <span> Calling API...</span>
+                            }
+                            else
+                            {
+                                <span>Call API</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+            <div class="app-width-1-2">
+                <div class="card">
+                    <div class="card-header bg-dark text-white">
+                        <h5>API Response</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (Response != null)
+                        {
+                            <div class="mb-3">
+                                <strong>Status Code:</strong>
+                                <span class="badge @GetStatusCodeBadgeClass(Response.StatusCode)">@((int)Response.StatusCode) @Response.StatusCode</span>
+                            </div>
+
+                            <div class="mb-3">
+                                <strong>Response Time:</strong> @Response.ResponseTimeMs ms
+                            </div>
+
+                            <div class="mb-3">
+                                <strong>Headers:</strong>
+                                <pre class="p-2 bg-light rounded">@Response.Headers</pre>
+                            </div>
+
+                            <div>
+                                <strong>Body:</strong>
+                                <pre class="p-2 bg-light rounded" style="max-height: 300px; overflow: auto;">@Response.Body</pre>
+                            </div>
+                        }
+                        else
+                        {
+                            <p>No response yet. Make an API call to see results.</p>
+                        }
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="alert alert-danger">
+                        @ErrorMessage
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+    <div class="app-content">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5>Request History</h5>
+            </div>
+            <div class="card-body">
+                @if (RequestHistory.Any())
+                {
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Method</th>
+                                <th>URL</th>
+                                <th>Status</th>
+                                <th>Time</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in RequestHistory)
+                            {
+                                <tr>
+                                    <td>@item.Method</td>
+                                    <td class="text-truncate" style="max-width: 200px;">@item.Url</td>
+                                    <td>
+                                        <span class="badge @GetStatusCodeBadgeClass(item.StatusCode)">@((int)item.StatusCode) @item.StatusCode</span>
+                                    </td>
+                                    <td>@item.ResponseTimeMs ms</td>
+                                    <td>
+                                        <button @onclick="() => LoadHistoryItem(item)" class="btn btn-sm btn-info">View</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p>No history yet. Make some API calls to build history.</p>
+                }
+            </div>
+        </div>
+
+    </div>
+    <div class="app-content">
+        <div class="alert alert-dark">
+            <button class="app-btn app-btn-wave app-btn-primary">Login</button>
+            <button class="app-btn app-btn-wave app-btn-secondary">Login</button>
+            <button class="app-btn app-btn-wave app-btn-success">Login</button>
+            <button class="app-btn app-btn-wave app-btn-warning">Login</button>
+            <button class="app-btn app-btn-wave app-btn-danger">Login</button>
+        </div>
+    </div>
+</div>
+
+
+
+@code {
+    private string SelectedMethod { get; set; } = "GET";
+    private string ApiUrl { get; set; } = "https://jsonplaceholder.typicode.com/posts/1";
+    private string RequestBody { get; set; } = "";
+    private string RequestHeaders { get; set; } = "";
+    private bool IsLoading { get; set; } = false;
+    private string ErrorMessage { get; set; } = "";
+    private ApiResponse? Response { get; set; }
+    private List<ApiResponse> RequestHistory { get; set; } = new();
+
+    private bool ShowBodyInput => SelectedMethod != "GET" && SelectedMethod != "DELETE";
+
+    private async Task CallApi()
+    {
+        if (string.IsNullOrWhiteSpace(ApiUrl))
+        {
+            ErrorMessage = "Please enter a valid URL";
+            return;
+        }
+
+        IsLoading = true;
+        ErrorMessage = "";
+
+        try
+        {
+            var startTime = DateTime.Now;
+
+            var request = new HttpRequestMessage(new HttpMethod(SelectedMethod), ApiUrl);
+
+            // Add headers if provided
+            if (!string.IsNullOrWhiteSpace(RequestHeaders))
+            {
+                try
+                {
+                    var headersDict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(RequestHeaders);
+                    if (headersDict != null)
+                    {
+                        foreach (var header in headersDict)
+                        {
+                            request.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Logger.LogError(ex, "Error parsing headers");
+                    ErrorMessage = "Invalid headers format. Please use JSON format like: {\"Content-Type\": \"application/json\"}";
+                    IsLoading = false;
+                    return;
+                }
+            }
+
+            // Add body if needed
+            if (ShowBodyInput && !string.IsNullOrWhiteSpace(RequestBody))
+            {
+                try
+                {
+                    request.Content = new StringContent(RequestBody, System.Text.Encoding.UTF8, "application/json");
+                }
+                catch (Exception ex)
+                {
+                    // Logger.LogError(ex, "Error creating request content");
+                    ErrorMessage = "Error creating request body";
+                    IsLoading = false;
+                    return;
+                }
+            }
+
+            HttpResponseMessage response;
+            try
+            {
+                response = await Http.SendAsync(request);
+            }
+            catch (HttpRequestException ex)
+            {
+                ErrorMessage = $"Request failed: {ex.Message}";
+                IsLoading = false;
+                return;
+            }
+
+            var endTime = DateTime.Now;
+            var responseTime = (endTime - startTime).TotalMilliseconds;
+
+            string responseBody;
+            try
+            {
+                responseBody = await response.Content.ReadAsStringAsync();
+                // Try to pretty print if it's JSON
+                try
+                {
+                    var jsonDoc = System.Text.Json.JsonDocument.Parse(responseBody);
+                    responseBody = System.Text.Json.JsonSerializer.Serialize(jsonDoc, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                }
+                catch
+                {
+                    // Not JSON, leave as is
+                }
+            }
+            catch (Exception ex)
+            {
+                // Logger.LogError(ex, "Error reading response");
+                responseBody = "[Error reading response body]";
+            }
+
+            string headers = string.Join(Environment.NewLine,
+                response.Headers.Select(h => $"{h.Key}: {string.Join(", ", h.Value)}"));
+
+            Response = new ApiResponse
+            {
+                Method = SelectedMethod,
+                Url = ApiUrl,
+                StatusCode = response.StatusCode,
+                Headers = headers,
+                Body = responseBody,
+                ResponseTimeMs = (int)responseTime,
+                RequestBody = RequestBody,
+                RequestHeaders = RequestHeaders
+            };
+
+            RequestHistory.Insert(0, Response);
+
+            // Keep only last 20 items in history
+            if (RequestHistory.Count > 20)
+            {
+                RequestHistory.RemoveAt(RequestHistory.Count - 1);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Logger.LogError(ex, "Error calling API");
+            ErrorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void LoadHistoryItem(ApiResponse item)
+    {
+        SelectedMethod = item.Method;
+        ApiUrl = item.Url;
+        RequestBody = item.RequestBody;
+        RequestHeaders = item.RequestHeaders;
+        Response = item;
+    }
+
+    private string GetStatusCodeBadgeClass(HttpStatusCode statusCode)
+    {
+        int status = (int)statusCode;
+        return status switch
+        {
+            >= 200 and < 300 => "bg-success",
+            >= 300 and < 400 => "bg-info",
+            >= 400 and < 500 => "bg-warning",
+            >= 500 => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private class ApiResponse
+    {
+        public string Method { get; set; } = "";
+        public string Url { get; set; } = "";
+        public HttpStatusCode StatusCode { get; set; }
+        public string Headers { get; set; } = "";
+        public string Body { get; set; } = "";
+        public int ResponseTimeMs { get; set; }
+        public string RequestBody { get; set; } = "";
+        public string RequestHeaders { get; set; } = "";
+    }
+}
