@@ -1,8 +1,12 @@
 ﻿@page "/"
 @using System.Net
+@using Blazor.ServerApp.Client.Components.Common
+@using Blazor.ServerApp.Client.Extensions
+@using Microsoft.AspNetCore.WebUtilities
 @using Microsoft.Extensions.Logging
 @rendermode InteractiveServer
 @inject HttpClient Http
+@inject NavigationManager NavigationManager
 
 <PageTitle>API Dashboard</PageTitle>
 
@@ -148,11 +152,18 @@
     </div>
     <div class="app-content">
         <div class="alert alert-dark">
-            <button class="app-btn app-btn-wave app-btn-primary">Login</button>
+            <button class="app-btn app-btn-wave app-btn-primary" @onclick="LoginAsSSO">Login</button>
             <button class="app-btn app-btn-wave app-btn-secondary">Login</button>
             <button class="app-btn app-btn-wave app-btn-success">Login</button>
             <button class="app-btn app-btn-wave app-btn-warning">Login</button>
             <button class="app-btn app-btn-wave app-btn-danger">Login</button>
+        </div>
+    </div>
+    <div class="app-content">
+        <div class="app-grid">
+            <div class="app-width-1-1">Token => <AppMiniText Value="@Token" MaxLength="50" Ellipsis=" [more...]" /></div>
+            <div class="app-width-1-1">RefreshToken => <AppMiniText Value="@RefreshToken" MaxLength="50"  /> </div>
+            <div class="app-width-1-1">ExpireTime => <AppMiniText Value="@ExpireTime" MaxLength="50" /> </div>
         </div>
     </div>
 </div>
@@ -168,7 +179,9 @@
     private string ErrorMessage { get; set; } = "";
     private ApiResponse? Response { get; set; }
     private List<ApiResponse> RequestHistory { get; set; } = new();
-
+    private string? Token { get; set; }
+    private string? RefreshToken { get; set; }
+    private string? ExpireTime { get; set; }
     private bool ShowBodyInput => SelectedMethod != "GET" && SelectedMethod != "DELETE";
 
     private async Task CallApi()
@@ -295,6 +308,34 @@
         {
             IsLoading = false;
         }
+    }
+
+    private void LoginAsSSO()
+    {
+        string url = $"https://localhost:6200/Account/Login?returnUrl={NavigationManager.BaseUri.GetUrl()}";
+        NavigationManager.NavigateTo(url);
+    }
+
+    protected override void OnInitialized()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("token", out var tokenValues))
+        {
+            Token = tokenValues.FirstOrDefault();
+        }
+
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("refreshToken", out var refreshTokenValues))
+        {
+            RefreshToken = refreshTokenValues.FirstOrDefault();
+        }
+
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("expireTime", out var expireTimeValues))
+        {
+            ExpireTime = expireTimeValues.FirstOrDefault();
+        }
+
+        // Now you can use Token, RefreshToken, and ExpireTime
     }
 
     private void LoadHistoryItem(ApiResponse item)

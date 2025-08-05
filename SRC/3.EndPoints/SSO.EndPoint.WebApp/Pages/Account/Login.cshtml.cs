@@ -73,7 +73,12 @@ public class LoginModel : PageModel
 
         if (result.Succeeded)
         {
-            return RedirectToLocal(ReturnUrl);
+            var token = await _identityService.TokenService.GenerateTokenAsync(new()
+            {
+                Username = Input.Username
+            });
+            return Redirect($"{ReturnUrl}?token={token.Token}&refreshToken={token.RefreshToken}&expireTime={token.ExpireTime}");
+            //return RedirectToLocal($"{ReturnUrl}?token={token.Token}&refreshToken={token.RefreshToken}&expireTime={token.ExpireTime}");
         }
 
         if (result.Message.Contains("locked", StringComparison.OrdinalIgnoreCase))

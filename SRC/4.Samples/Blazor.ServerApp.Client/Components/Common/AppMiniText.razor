@@ -1,0 +1,52 @@
+﻿@using System.Text
+
+
+<div class="app-mini-text-container">
+    @if (ShowFullText)
+    {
+        <span class="app-full-text">@Value</span>
+    }
+    else
+    {
+        <span class="app-truncated-text">@TruncatedValue</span>
+    }
+    @if (!string.IsNullOrEmpty(Value))
+    {
+        <button @onclick="ToggleText" class="app-toggle-btn">
+            @(ShowFullText ? "Show Less" : "Show More")
+        </button>
+    }
+
+
+</div>
+
+@code {
+    [Parameter]
+    public string Value { get; set; } = string.Empty;
+
+    [Parameter]
+    public int MaxLength { get; set; } = 100;
+
+    [Parameter]
+    public string Ellipsis { get; set; } = "...";
+
+    private bool ShowFullText { get; set; } = false;
+
+    private string TruncatedValue => getTruncatedValue();
+
+
+    private string getTruncatedValue()
+    {
+        if (string.IsNullOrEmpty(Value))
+        {
+            return string.Empty;
+        }
+        return Value.Length > MaxLength
+            ? Value.Substring(0, MaxLength) + Ellipsis
+            : Value;
+    }
+    private void ToggleText()
+    {
+        ShowFullText = !ShowFullText;
+    }
+}
