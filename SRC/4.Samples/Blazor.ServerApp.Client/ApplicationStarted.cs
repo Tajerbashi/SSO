@@ -14,7 +14,6 @@ public static class ApplicationStarted
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddHttpLogging();
         builder.Services.AddLogging();
-
         return builder;
     }
 

@@ -2,11 +2,13 @@
 @using System.Net
 @using Blazor.ServerApp.Client.Components.Common
 @using Blazor.ServerApp.Client.Extensions
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
 @using Microsoft.AspNetCore.WebUtilities
 @using Microsoft.Extensions.Logging
 @rendermode InteractiveServer
 @inject HttpClient Http
 @inject NavigationManager NavigationManager
+@inject ProtectedSessionStorage ProtectedSessionStorage
 
 <PageTitle>API Dashboard</PageTitle>
 
@@ -153,7 +155,7 @@
     <div class="app-content">
         <div class="alert alert-dark">
             <button class="app-btn app-btn-wave app-btn-primary" @onclick="LoginAsSSO">Login</button>
-            <button class="app-btn app-btn-wave app-btn-secondary">Login</button>
+            <button class="app-btn app-btn-wave app-btn-secondary" @onclick="GetToken">GetToken</button>
             <button class="app-btn app-btn-wave app-btn-success">Login</button>
             <button class="app-btn app-btn-wave app-btn-warning">Login</button>
             <button class="app-btn app-btn-wave app-btn-danger">Login</button>
@@ -162,7 +164,7 @@
     <div class="app-content">
         <div class="app-grid">
             <div class="app-width-1-1">Token => <AppMiniText Value="@Token" MaxLength="50" Ellipsis=" [more...]" /></div>
-            <div class="app-width-1-1">RefreshToken => <AppMiniText Value="@RefreshToken" MaxLength="50"  /> </div>
+            <div class="app-width-1-1">RefreshToken => <AppMiniText Value="@RefreshToken" MaxLength="50" /> </div>
             <div class="app-width-1-1">ExpireTime => <AppMiniText Value="@ExpireTime" MaxLength="50" /> </div>
         </div>
     </div>
@@ -316,7 +318,7 @@
         NavigationManager.NavigateTo(url);
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
 
@@ -334,10 +336,22 @@
         {
             ExpireTime = expireTimeValues.FirstOrDefault();
         }
-
-        // Now you can use Token, RefreshToken, and ExpireTime
     }
-
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await ProtectedSessionStorage.SetAsync("Token", Token);
+            await ProtectedSessionStorage.SetAsync("RefreshToken", RefreshToken);
+            await ProtectedSessionStorage.SetAsync("ExpireTime", ExpireTime);
+        }
+        return;
+    }
+    private async Task GetToken()
+    {
+        // Blazor Server
+        var result = await ProtectedSessionStorage.GetAsync<string>("Token");
+    }
     private void LoadHistoryItem(ApiResponse item)
     {
         SelectedMethod = item.Method;
