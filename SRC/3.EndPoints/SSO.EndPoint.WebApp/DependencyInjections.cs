@@ -95,7 +95,7 @@ public static class DependencyInjections
     public static WebApplication AddMinimalApis(this WebApplication app)
     {
 
-        var baseUrl = app.Configuration["BaseUrl"] + "Public/Dashboard";
+        var baseUrl = "/Public/Dashboard";
         var dateTime = DateTime.Now;
         app.MapGet("/", () =>
         {
